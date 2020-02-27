@@ -11,8 +11,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
@@ -20,6 +22,12 @@ import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
@@ -30,9 +38,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.NewIntentListener;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+import io.flutter.plugins.firebasemessaging.cache.BackgroundCache;
 
 /** FirebaseMessagingPlugin */
 public class FirebaseMessagingPlugin extends BroadcastReceiver
@@ -197,6 +203,16 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
               });
       if (mainActivity != null) {
         sendMessageFromIntent("onLaunch", mainActivity.getIntent());
+        //start of solution for Ingenio Advisor project
+        BackgroundCache cache = new BackgroundCache(applicationContext);
+        List<? extends Map<String, String>> notificationsData = cache.getAll();
+        for (Map<String, String> notificationData : notificationsData) {
+          Map<String, Object> message = new HashMap<>();
+          message.put("data", notificationData);
+          channel.invokeMethod("onLaunch", message);
+        }
+        cache.clear();
+        //end of solution for Ingenio Advisor project
       }
       result.success(null);
     } else if ("subscribeToTopic".equals(call.method)) {

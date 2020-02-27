@@ -12,15 +12,12 @@ import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Process;
 import android.util.Log;
+
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
-import io.flutter.plugin.common.MethodChannel;
-import io.flutter.plugin.common.PluginRegistry;
-import io.flutter.view.FlutterCallbackInformation;
-import io.flutter.view.FlutterMain;
-import io.flutter.view.FlutterNativeView;
-import io.flutter.view.FlutterRunArguments;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -29,6 +26,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.flutter.plugin.common.MethodChannel;
+import io.flutter.plugin.common.PluginRegistry;
+import io.flutter.plugins.firebasemessaging.cache.BackgroundCache;
+import io.flutter.view.FlutterCallbackInformation;
+import io.flutter.view.FlutterMain;
+import io.flutter.view.FlutterNativeView;
+import io.flutter.view.FlutterRunArguments;
 
 public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
 
@@ -63,11 +68,14 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
 
   private static Context backgroundContext;
 
+  private BackgroundCache cache;
+
   @Override
   public void onCreate() {
     super.onCreate();
 
     backgroundContext = getApplicationContext();
+    cache = new BackgroundCache(backgroundContext);
     FlutterMain.ensureInitializationComplete(backgroundContext, null);
 
     // If background isolate is not running start it.
@@ -92,6 +100,9 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
       intent.putExtra(EXTRA_REMOTE_MESSAGE, remoteMessage);
       LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     } else {
+      //start of solution for Ingenio Advisor project
+      cache.put(remoteMessage.getData());
+      //end of solution for Ingenio Advisor project
       // If background isolate is not running yet, put message in queue and it will be handled
       // when the isolate starts.
       if (!isIsolateRunning.get()) {
