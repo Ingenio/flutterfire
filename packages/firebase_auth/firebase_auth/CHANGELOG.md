@@ -1,3 +1,15 @@
+## 0.16.0
+
+* Migrate to Android v2 embedding.
+
+## 0.15.5+3
+
+* Fix for missing UserAgent.h compilation failures.
+
+## 0.15.5+2
+
+* Update the platform interface dependency to 1.1.7 and update tests.
+
 ## 0.15.5+1
 
 * Make the pedantic dev_dependency explicit.
