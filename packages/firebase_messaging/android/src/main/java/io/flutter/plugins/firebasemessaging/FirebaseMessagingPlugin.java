@@ -5,6 +5,7 @@
 package io.flutter.plugins.firebasemessaging;
 
 import android.app.Activity;
+import android.app.Application;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +14,7 @@ import android.os.Bundle;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -50,6 +52,40 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   private MethodChannel channel;
   private Context applicationContext;
   private Activity mainActivity;
+  private final Application.ActivityLifecycleCallbacks lifecycleCallbacks =
+          new Application.ActivityLifecycleCallbacks() {
+    @Override
+    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) { }
+
+    @Override
+    public void onActivityStarted(@NonNull Activity activity) { }
+
+    @Override
+    public void onActivityResumed(@NonNull Activity activity) {
+      //start of solution for Ingenio Advisor project
+      BackgroundCache cache = new BackgroundCache(applicationContext);
+      List<? extends Map<String, String>> notificationsData = cache.getAll();
+      for (Map<String, String> notificationData : notificationsData) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("data", notificationData);
+        channel.invokeMethod("onResume", message);
+      }
+      cache.clear();
+      //end of solution for Ingenio Advisor project
+    }
+
+    @Override
+    public void onActivityPaused(@NonNull Activity activity) { }
+
+    @Override
+    public void onActivityStopped(@NonNull Activity activity) { }
+
+    @Override
+    public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) { }
+
+    @Override
+    public void onActivityDestroyed(@NonNull Activity activity) { }
+  };
 
   public static void registerWith(Registrar registrar) {
     FirebaseMessagingPlugin instance = new FirebaseMessagingPlugin();
@@ -79,6 +115,7 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
 
   private void setActivity(Activity flutterActivity) {
     this.mainActivity = flutterActivity;
+    mainActivity.getApplication().registerActivityLifecycleCallbacks(lifecycleCallbacks);
   }
 
   @Override
@@ -95,6 +132,7 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   public void onAttachedToActivity(ActivityPluginBinding binding) {
     binding.addOnNewIntentListener(this);
     this.mainActivity = binding.getActivity();
+    mainActivity.getApplication().registerActivityLifecycleCallbacks(lifecycleCallbacks);
   }
 
   @Override
@@ -106,10 +144,12 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   public void onReattachedToActivityForConfigChanges(ActivityPluginBinding binding) {
     binding.addOnNewIntentListener(this);
     this.mainActivity = binding.getActivity();
+    mainActivity.getApplication().registerActivityLifecycleCallbacks(lifecycleCallbacks);
   }
 
   @Override
   public void onDetachedFromActivity() {
+    mainActivity.getApplication().unregisterActivityLifecycleCallbacks(lifecycleCallbacks);
     this.mainActivity = null;
   }
 
@@ -202,16 +242,6 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
               });
       if (mainActivity != null) {
         sendMessageFromIntent("onLaunch", mainActivity.getIntent());
-        //start of solution for Ingenio Advisor project
-        BackgroundCache cache = new BackgroundCache(applicationContext);
-        List<? extends Map<String, String>> notificationsData = cache.getAll();
-        for (Map<String, String> notificationData : notificationsData) {
-          Map<String, Object> message = new HashMap<>();
-          message.put("data", notificationData);
-          channel.invokeMethod("onLaunch", message);
-        }
-        cache.clear();
-        //end of solution for Ingenio Advisor project
       }
       result.success(null);
     } else if ("subscribeToTopic".equals(call.method)) {
