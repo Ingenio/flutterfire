@@ -9,6 +9,9 @@ import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Process;
 import android.util.Log;
@@ -96,6 +99,7 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
     // If application is running in the foreground use local broadcast to handle message.
     // Otherwise use the background isolate to handle message.
     if (isApplicationForeground(this)) {
+      playNotificationSound(backgroundContext);
       Intent intent = new Intent(ACTION_REMOTE_MESSAGE);
       intent.putExtra(EXTRA_REMOTE_MESSAGE, remoteMessage);
       LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
@@ -124,6 +128,16 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
           Log.i(TAG, "Exception waiting to execute Dart callback", ex);
         }
       }
+    }
+  }
+
+  public void playNotificationSound(Context context) {
+    try {
+      Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+      Ringtone r = RingtoneManager.getRingtone(context, notification);
+      r.play();
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
