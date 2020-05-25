@@ -133,14 +133,17 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
 
   public void playNotificationSound(Context context, final RemoteMessage remoteMessage) {
     try {
-      String soundUri = String.format("android.resource://%s/raw/%s",
-              backgroundContext.getPackageName(),
-              remoteMessage.getNotification().getSound());
-      System.out.println("NOTIFICATION SOUND URI");
-      Uri notification = Uri.parse(soundUri);
-      Ringtone r = RingtoneManager.getRingtone(context, notification);
-      if (r != null) {
-        r.play();
+      RemoteMessage.Notification notification = remoteMessage.getNotification();
+      if (notification != null) {
+        String soundUri = String.format("android.resource://%s/raw/%s",
+                backgroundContext.getPackageName(),
+                notification.getSound());
+        System.out.println("NOTIFICATION SOUND URI" + soundUri);
+        Uri sound = Uri.parse(soundUri);
+        Ringtone r = RingtoneManager.getRingtone(context, sound);
+        if (r != null) {
+          r.play();
+        }
       }
     } catch (Exception e) {
       e.printStackTrace();
