@@ -21,6 +21,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -51,6 +52,7 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
   private static final String BACKGROUND_SETUP_CALLBACK_HANDLE_KEY = "background_setup_callback";
   private static final String BACKGROUND_MESSAGE_CALLBACK_HANDLE_KEY =
       "background_message_callback";
+  private static final String NOTIFICATION_ID = "sessionId";
 
   // TODO(kroikie): make isIsolateRunning per-instance, not static.
   private static AtomicBoolean isIsolateRunning = new AtomicBoolean(false);
@@ -71,14 +73,11 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
 
   private static Context backgroundContext;
 
-  private BackgroundCache cache;
-
   @Override
   public void onCreate() {
     super.onCreate();
 
     backgroundContext = getApplicationContext();
-    cache = new BackgroundCache(backgroundContext);
     FlutterMain.ensureInitializationComplete(backgroundContext, null);
 
     // If background isolate is not running start it.
@@ -105,7 +104,7 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
       LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     } else {
       //start of solution for Ingenio Advisor project
-      cache.put(remoteMessage.getData());
+      putMessageDataToCache(remoteMessage.getData());
       //end of solution for Ingenio Advisor project
       // If background isolate is not running yet, put message in queue and it will be handled
       // when the isolate starts.
@@ -131,7 +130,25 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
     }
   }
 
-  public void playNotificationSound(Context context, final RemoteMessage remoteMessage) {
+  private void putMessageDataToCache(Map<String, String> remoteMessageData) {
+    ArrayList<HashMap<String, String>> messagesData = BackgroundCache.get(backgroundContext);
+    if (messagesData != null) {
+      final String sessionId = remoteMessageData.get(NOTIFICATION_ID);
+      if (sessionId != null) {
+        for (HashMap<String, String> notificationData : messagesData) {
+          final String id = notificationData.get(NOTIFICATION_ID);
+          if (sessionId.equals(id)) {
+            messagesData.remove(notificationData);
+            break;
+          }
+        }
+        messagesData.add(new HashMap<>(remoteMessageData));
+        BackgroundCache.put(backgroundContext, messagesData);
+      }
+    }
+  }
+
+  private void playNotificationSound(Context context, final RemoteMessage remoteMessage) {
     try {
       RemoteMessage.Notification notification = remoteMessage.getNotification();
       if (notification != null) {

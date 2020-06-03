@@ -10,6 +10,9 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -26,8 +29,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.RemoteMessage;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -48,6 +51,7 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
 
   private static final String CLICK_ACTION_VALUE = "FLUTTER_NOTIFICATION_CLICK";
   private static final String TAG = "FirebaseMessagingPlugin";
+  private static Ringtone ringtone;
 
   private MethodChannel channel;
   private Context applicationContext;
@@ -63,14 +67,16 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
     @Override
     public void onActivityResumed(@NonNull Activity activity) {
       //start of solution for Ingenio Advisor project
-      BackgroundCache cache = new BackgroundCache(applicationContext);
-      List<? extends Map<String, String>> notificationsData = cache.getAll();
-      for (Map<String, String> notificationData : notificationsData) {
-        Map<String, Object> message = new HashMap<>();
-        message.put("data", notificationData);
-        channel.invokeMethod("onResume", message);
+      ArrayList<HashMap<String, String>> remoteMessages = BackgroundCache.get(applicationContext);
+      if (remoteMessages != null) {
+        for (Map<String, String> notificationData : remoteMessages) {
+          Map<String, Object> message = new HashMap<>();
+          message.put("data", notificationData);
+          channel.invokeMethod("onResume", message);
+        }
+        remoteMessages.clear();
+        BackgroundCache.put(applicationContext, remoteMessages);
       }
-      cache.clear();
       //end of solution for Ingenio Advisor project
     }
 
@@ -168,9 +174,33 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
     } else if (action.equals(FlutterFirebaseMessagingService.ACTION_REMOTE_MESSAGE)) {
       RemoteMessage message =
           intent.getParcelableExtra(FlutterFirebaseMessagingService.EXTRA_REMOTE_MESSAGE);
+      playNotificationSound(applicationContext, message);
       Map<String, Object> content = parseRemoteMessage(message);
       channel.invokeMethod("onMessage", content);
     }
+  }
+
+  private static void playNotificationSound(Context context, final RemoteMessage remoteMessage) {
+    try {
+      RemoteMessage.Notification notification = remoteMessage.getNotification();
+      if (notification != null) {
+        String soundUri = String.format("android.resource://%s/raw/%s",
+                context.getPackageName(),
+                notification.getSound());
+        System.out.println("NOTIFICATION SOUND URI " + soundUri);
+        Uri sound = Uri.parse(soundUri);
+        ringtone = RingtoneManager.getRingtone(context, sound);
+        if (ringtone != null) {
+          ringtone.play();
+        }
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  public static Ringtone getRingtone() {
+    return ringtone;
   }
 
   @NonNull
