@@ -9,9 +9,6 @@ import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.media.Ringtone;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Process;
 import android.util.Log;
@@ -21,6 +18,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -51,6 +49,7 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
   private static final String BACKGROUND_SETUP_CALLBACK_HANDLE_KEY = "background_setup_callback";
   private static final String BACKGROUND_MESSAGE_CALLBACK_HANDLE_KEY =
       "background_message_callback";
+  private static final String NOTIFICATION_ID = "sessionId";
 
   // TODO(kroikie): make isIsolateRunning per-instance, not static.
   private static AtomicBoolean isIsolateRunning = new AtomicBoolean(false);
@@ -71,14 +70,11 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
 
   private static Context backgroundContext;
 
-  private BackgroundCache cache;
-
   @Override
   public void onCreate() {
     super.onCreate();
 
     backgroundContext = getApplicationContext();
-    cache = new BackgroundCache(backgroundContext);
     FlutterMain.ensureInitializationComplete(backgroundContext, null);
 
     // If background isolate is not running start it.
@@ -99,13 +95,12 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
     // If application is running in the foreground use local broadcast to handle message.
     // Otherwise use the background isolate to handle message.
     if (isApplicationForeground(this)) {
-      playNotificationSound(backgroundContext, remoteMessage);
       Intent intent = new Intent(ACTION_REMOTE_MESSAGE);
       intent.putExtra(EXTRA_REMOTE_MESSAGE, remoteMessage);
       LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
     } else {
       //start of solution for Ingenio Advisor project
-      cache.put(remoteMessage.getData());
+      putMessageDataToCache(remoteMessage.getData());
       //end of solution for Ingenio Advisor project
       // If background isolate is not running yet, put message in queue and it will be handled
       // when the isolate starts.
@@ -131,22 +126,25 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
     }
   }
 
-  public void playNotificationSound(Context context, final RemoteMessage remoteMessage) {
-    try {
-      RemoteMessage.Notification notification = remoteMessage.getNotification();
-      if (notification != null) {
-        String soundUri = String.format("android.resource://%s/raw/%s",
-                backgroundContext.getPackageName(),
-                notification.getSound());
-        System.out.println("NOTIFICATION SOUND URI" + soundUri);
-        Uri sound = Uri.parse(soundUri);
-        Ringtone r = RingtoneManager.getRingtone(context, sound);
-        if (r != null) {
-          r.play();
+  private void putMessageDataToCache(Map<String, String> remoteMessageData) {
+    ArrayList<HashMap<String, String>> messagesData = new ArrayList<>();
+    ArrayList<HashMap<String, String>> cache = BackgroundCache.get(backgroundContext);
+    if (cache != null) {
+      messagesData.addAll(cache);
+    }
+    final String sessionId = remoteMessageData.get(NOTIFICATION_ID);
+    if (sessionId != null) {
+      if (!messagesData.isEmpty()) {
+        for (HashMap<String, String> notificationData : messagesData) {
+          final String id = notificationData.get(NOTIFICATION_ID);
+          if (sessionId.equals(id)) {
+            messagesData.remove(notificationData);
+            break;
+          }
         }
       }
-    } catch (Exception e) {
-      e.printStackTrace();
+      messagesData.add(new HashMap<>(remoteMessageData));
+      BackgroundCache.put(backgroundContext, messagesData);
     }
   }
 
