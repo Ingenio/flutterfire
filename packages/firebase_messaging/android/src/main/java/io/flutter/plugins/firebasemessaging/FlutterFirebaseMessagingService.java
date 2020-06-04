@@ -130,18 +130,19 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
   private void putMessageDataToCache(Map<String, String> remoteMessageData) {
     ArrayList<HashMap<String, String>> messagesData = BackgroundCache.get(backgroundContext);
     if (messagesData != null) {
-      final String sessionId = remoteMessageData.get(NOTIFICATION_ID);
-      if (sessionId != null) {
-        for (HashMap<String, String> notificationData : messagesData) {
-          final String id = notificationData.get(NOTIFICATION_ID);
-          if (sessionId.equals(id)) {
-            messagesData.remove(notificationData);
-            break;
-          }
+      messagesData = new ArrayList<>();
+    }
+    final String sessionId = remoteMessageData.get(NOTIFICATION_ID);
+    if (sessionId != null) {
+      for (HashMap<String, String> notificationData : messagesData) {
+        final String id = notificationData.get(NOTIFICATION_ID);
+        if (sessionId.equals(id)) {
+          messagesData.remove(notificationData);
+          break;
         }
-        messagesData.add(new HashMap<>(remoteMessageData));
-        BackgroundCache.put(backgroundContext, messagesData);
       }
+      messagesData.add(new HashMap<>(remoteMessageData));
+      BackgroundCache.put(backgroundContext, messagesData);
     }
   }
 
