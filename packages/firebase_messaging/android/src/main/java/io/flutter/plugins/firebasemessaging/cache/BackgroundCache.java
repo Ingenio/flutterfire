@@ -18,7 +18,7 @@ public class BackgroundCache {
             return serializer.read(context, FILE_NAME);
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
-            Log.d("NOTIFICATION SERIALIZER", "error: " + e);
+            Log.d("NOTIFICATION SERIALIZER", "get messages error: " + e);
             return null;
         }
     }
@@ -27,8 +27,8 @@ public class BackgroundCache {
         try {
             serializer.write(context, FILE_NAME, notifications);
         } catch (IOException e) {
-            Log.d("NOTIFICATION SERIALIZER", "error: " + e);
             e.printStackTrace();
+            Log.d("NOTIFICATION SERIALIZER", "put messages error: " + e);
         }
     }
 }
