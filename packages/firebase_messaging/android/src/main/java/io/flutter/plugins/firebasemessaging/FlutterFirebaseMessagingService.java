@@ -95,7 +95,6 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
     // If application is running in the foreground use local broadcast to handle message.
     // Otherwise use the background isolate to handle message.
     if (isApplicationForeground(this)) {
-//      playNotificationSound(backgroundContext, remoteMessage);
       Intent intent = new Intent(ACTION_REMOTE_MESSAGE);
       intent.putExtra(EXTRA_REMOTE_MESSAGE, remoteMessage);
       LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
@@ -128,42 +127,26 @@ public class FlutterFirebaseMessagingService extends FirebaseMessagingService {
   }
 
   private void putMessageDataToCache(Map<String, String> remoteMessageData) {
-    ArrayList<HashMap<String, String>> messagesData = BackgroundCache.get(backgroundContext);
-    if (messagesData != null) {
-      messagesData = new ArrayList<>();
+    ArrayList<HashMap<String, String>> messagesData = new ArrayList<>();
+    ArrayList<HashMap<String, String>> cache = BackgroundCache.get(backgroundContext);
+    if (cache != null) {
+      messagesData.addAll(cache);
     }
     final String sessionId = remoteMessageData.get(NOTIFICATION_ID);
     if (sessionId != null) {
-      for (HashMap<String, String> notificationData : messagesData) {
-        final String id = notificationData.get(NOTIFICATION_ID);
-        if (sessionId.equals(id)) {
-          messagesData.remove(notificationData);
-          break;
+      if (!messagesData.isEmpty()) {
+        for (HashMap<String, String> notificationData : messagesData) {
+          final String id = notificationData.get(NOTIFICATION_ID);
+          if (sessionId.equals(id)) {
+            messagesData.remove(notificationData);
+            break;
+          }
         }
       }
       messagesData.add(new HashMap<>(remoteMessageData));
       BackgroundCache.put(backgroundContext, messagesData);
     }
   }
-
-//  private void playNotificationSound(Context context, final RemoteMessage remoteMessage) {
-//    try {
-//      RemoteMessage.Notification notification = remoteMessage.getNotification();
-//      if (notification != null) {
-//        String soundUri = String.format("android.resource://%s/raw/%s",
-//                backgroundContext.getPackageName(),
-//                notification.getSound());
-//        System.out.println("NOTIFICATION SOUND URI" + soundUri);
-//        Uri sound = Uri.parse(soundUri);
-//        Ringtone r = RingtoneManager.getRingtone(context, sound);
-//        if (r != null) {
-//          r.play();
-//        }
-//      }
-//    } catch (Exception e) {
-//      e.printStackTrace();
-//    }
-//  }
 
   /**
    * Called when a new token for the default Firebase project is generated.
