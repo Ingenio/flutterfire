@@ -52,55 +52,21 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   private static final String CLICK_ACTION_VALUE = "FLUTTER_NOTIFICATION_CLICK";
   private static final String TAG = "FirebaseMessagingPlugin";
   private static Ringtone ringtone;
+  private static NotificationsPusher notificationsPusher = new NotificationsPusher();
 
   private MethodChannel channel;
   private Context applicationContext;
   private Activity mainActivity;
-  private final Application.ActivityLifecycleCallbacks lifecycleCallbacks =
-          new Application.ActivityLifecycleCallbacks() {
-    @Override
-    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) { }
-
-    @Override
-    public void onActivityStarted(@NonNull Activity activity) { }
-
-    @Override
-    public void onActivityResumed(@NonNull Activity activity) {
-      //start of solution for Ingenio Advisor project
-      ArrayList<HashMap<String, String>> remoteMessages = BackgroundCache.get(applicationContext);
-      if (remoteMessages != null) {
-        for (Map<String, String> notificationData : remoteMessages) {
-          Map<String, Object> message = new HashMap<>();
-          message.put("data", notificationData);
-          channel.invokeMethod("onResume", message);
-        }
-        remoteMessages.clear();
-        BackgroundCache.put(applicationContext, remoteMessages);
-      }
-      //end of solution for Ingenio Advisor project
-    }
-
-    @Override
-    public void onActivityPaused(@NonNull Activity activity) { }
-
-    @Override
-    public void onActivityStopped(@NonNull Activity activity) { }
-
-    @Override
-    public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) { }
-
-    @Override
-    public void onActivityDestroyed(@NonNull Activity activity) { }
-  };
 
   public static void registerWith(Registrar registrar) {
     FirebaseMessagingPlugin instance = new FirebaseMessagingPlugin();
     instance.setActivity(registrar.activity());
     registrar.addNewIntentListener(instance);
-    instance.onAttachedToEngine(registrar.context(), registrar.messenger());
+    instance.onAttachedToEngine(registrar.context(), registrar.messenger(), notificationsPusher);
   }
 
-  private void onAttachedToEngine(Context context, BinaryMessenger binaryMessenger) {
+  private void onAttachedToEngine(Context context, BinaryMessenger binaryMessenger,
+                                  NotificationsPusher pusher) {
     this.applicationContext = context;
     FirebaseApp.initializeApp(applicationContext);
     channel = new MethodChannel(binaryMessenger, "plugins.flutter.io/firebase_messaging");
@@ -108,6 +74,7 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
         new MethodChannel(binaryMessenger, "plugins.flutter.io/firebase_messaging_background");
 
     channel.setMethodCallHandler(this);
+    pusher.attachToPlugin(applicationContext, channel);
     backgroundCallbackChannel.setMethodCallHandler(this);
     FlutterFirebaseMessagingService.setBackgroundChannel(backgroundCallbackChannel);
 
@@ -121,12 +88,14 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
 
   private void setActivity(Activity flutterActivity) {
     this.mainActivity = flutterActivity;
-    mainActivity.getApplication().registerActivityLifecycleCallbacks(lifecycleCallbacks);
+    Application application = mainActivity.getApplication();
+    application.unregisterActivityLifecycleCallbacks(notificationsPusher);
+    application.registerActivityLifecycleCallbacks(notificationsPusher);
   }
 
   @Override
   public void onAttachedToEngine(FlutterPluginBinding binding) {
-    onAttachedToEngine(binding.getApplicationContext(), binding.getBinaryMessenger());
+    onAttachedToEngine(binding.getApplicationContext(), binding.getBinaryMessenger(), notificationsPusher);
   }
 
   @Override
@@ -138,7 +107,7 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   public void onAttachedToActivity(ActivityPluginBinding binding) {
     binding.addOnNewIntentListener(this);
     this.mainActivity = binding.getActivity();
-    mainActivity.getApplication().registerActivityLifecycleCallbacks(lifecycleCallbacks);
+    mainActivity.getApplication().registerActivityLifecycleCallbacks(notificationsPusher);
   }
 
   @Override
@@ -150,12 +119,12 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   public void onReattachedToActivityForConfigChanges(ActivityPluginBinding binding) {
     binding.addOnNewIntentListener(this);
     this.mainActivity = binding.getActivity();
-    mainActivity.getApplication().registerActivityLifecycleCallbacks(lifecycleCallbacks);
+    mainActivity.getApplication().registerActivityLifecycleCallbacks(notificationsPusher);
   }
 
   @Override
   public void onDetachedFromActivity() {
-    mainActivity.getApplication().unregisterActivityLifecycleCallbacks(lifecycleCallbacks);
+    mainActivity.getApplication().unregisterActivityLifecycleCallbacks(notificationsPusher);
     this.mainActivity = null;
   }
 
@@ -403,5 +372,50 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
       return true;
     }
     return false;
+  }
+
+  static class NotificationsPusher implements Application.ActivityLifecycleCallbacks {
+
+    private Context context;
+    private MethodChannel channel;
+
+    public void attachToPlugin(Context context, MethodChannel channel) {
+      this.context = context;
+      this.channel = channel;
+    }
+
+    @Override
+    public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) { }
+
+    @Override
+    public void onActivityStarted(@NonNull Activity activity) { }
+
+    @Override
+    public void onActivityResumed(@NonNull Activity activity) {
+      //start of solution for Ingenio Advisor project
+      ArrayList<HashMap<String, String>> remoteMessages = BackgroundCache.get(context);
+      if (remoteMessages != null) {
+        for (Map<String, String> notificationData : remoteMessages) {
+          Map<String, Object> message = new HashMap<>();
+          message.put("data", notificationData);
+          channel.invokeMethod("onResume", message);
+        }
+        remoteMessages.clear();
+        BackgroundCache.put(context, remoteMessages);
+      }
+      //end of solution for Ingenio Advisor project
+    }
+
+    @Override
+    public void onActivityPaused(@NonNull Activity activity) { }
+
+    @Override
+    public void onActivityStopped(@NonNull Activity activity) { }
+
+    @Override
+    public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) { }
+
+    @Override
+    public void onActivityDestroyed(@NonNull Activity activity) {}
   }
 }
