@@ -22,7 +22,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.FirebaseApp;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -68,7 +67,6 @@ public class FirebaseMessagingPlugin extends BroadcastReceiver
   private void onAttachedToEngine(Context context, BinaryMessenger binaryMessenger,
                                   NotificationsPusher pusher) {
     this.applicationContext = context;
-    FirebaseApp.initializeApp(applicationContext);
     channel = new MethodChannel(binaryMessenger, "plugins.flutter.io/firebase_messaging");
     final MethodChannel backgroundCallbackChannel =
         new MethodChannel(binaryMessenger, "plugins.flutter.io/firebase_messaging_background");
