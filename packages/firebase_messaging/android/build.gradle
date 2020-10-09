@@ -8,7 +8,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.6.0'
+        classpath 'com.android.tools.build:gradle:3.5.3'
     }
 }
 
@@ -35,10 +35,10 @@ def getRootProjectExtOrCoreProperty(name, firebaseCoreProject) {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 16
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     lintOptions {
@@ -47,7 +47,11 @@ android {
     dependencies {
         api firebaseCoreProject
         implementation platform("com.google.firebase:firebase-bom:${getRootProjectExtOrCoreProperty("FirebaseSDKVersion", firebaseCoreProject)}")
+<<<<<<< HEAD
         implementation 'com.google.firebase:firebase-messaging:20.1.0'
+=======
+        implementation 'com.google.firebase:firebase-messaging'
+>>>>>>> 986c74ef17a2148f354986672aa60156220d79a9
         implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
         implementation 'androidx.annotation:annotation:1.1.0'
     }
