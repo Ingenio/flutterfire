@@ -47,11 +47,7 @@ android {
     dependencies {
         api firebaseCoreProject
         implementation platform("com.google.firebase:firebase-bom:${getRootProjectExtOrCoreProperty("FirebaseSDKVersion", firebaseCoreProject)}")
-<<<<<<< HEAD
-        implementation 'com.google.firebase:firebase-messaging:20.1.0'
-=======
         implementation 'com.google.firebase:firebase-messaging'
->>>>>>> 986c74ef17a2148f354986672aa60156220d79a9
         implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
         implementation 'androidx.annotation:annotation:1.1.0'
     }
